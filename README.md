@@ -29,7 +29,16 @@ Yet another League of Legends helper.
   - `101.qq.com`
   - ...
 
-## Download
+## Install
+
+### Windows
+1. Download the latest exe release from [here](https://github.com/GeorgeV220/champ-r/releases).
+### Ubuntu/Debian
+1. Download the latest deb release from [here](https://github.com/GeorgeV220/champ-r/releases).
+### Arch
+1. Download the latest pacman release from [here](https://github.com/GeorgeV220/champ-r/releases).
+2. Open the download location in your terminal e.g. cd /home/USER/Downloads.
+3. Then run pacman -U champ-r-1.1.14.pacman as root.
 
 https://github.com/GeorgeV220/champ-r/releases
 
