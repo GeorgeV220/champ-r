@@ -6,6 +6,9 @@ const path = require('path');
 const paths = require('./paths');
 const appPackageJson = require(paths.appPackageJson);
 
+const IS_WIN = process.platform === 'win32';
+const IS_LINUX = process.platform === 'linux';
+
 // Make sure that including paths.js after env.js will read .env variables.
 delete require.cache[require.resolve('./paths')];
 

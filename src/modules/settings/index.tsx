@@ -148,6 +148,29 @@ export default function Settings() {
         checked={theme}
         checkmarkType={STYLE_TYPE.toggle_round}
         onChange={onTheme}
+        overrides={{
+          Root: {
+            style: () => ({
+              height: `48px`,
+              display: `flex`,
+              alignItems: `center`,
+              marginTop: `1em`,
+            }),
+          },
+          Label: {
+            style: ({ $theme }) => {
+              return {
+                fontSize: $theme.typography.ParagraphMedium,
+                fontWeight: 600,
+                marginRight: `auto`,
+              };
+            },
+          },
+        }}>
+        {t(`dark theme`)}
+      </Checkbox>
+
+      <Checkbox
         checked={enableChinaCDN}
         checkmarkType={STYLE_TYPE.toggle_round}
         onChange={onToggleServer}
@@ -170,7 +193,6 @@ export default function Settings() {
             },
           },
         }}>
-        {t(`dark theme`)}
         {t(`mirror server`)}
       </Checkbox>
 

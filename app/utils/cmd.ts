@@ -6,9 +6,10 @@ const runCommand = promisify(exec);
 export async function execCmd(command: string, powershell = true) {
   try {
     let option = {
-      shell: powershell ? `powershell.exe` : `cmd.exe`,
+      shell: powershell ? `powershell.exe` :`cmd.exe`,
     };
-    const { stderr, stdout } = await runCommand(command, option);
+    
+    const { stderr, stdout } = process.env.IS_WIN ? await runCommand(command, option) : await runCommand(command);
     if (stderr) {
       return Promise.reject(stderr);
     }

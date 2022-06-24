@@ -2,7 +2,6 @@ import WebSocket from 'ws';
 
 import { LcuEvent, LcuMessageType } from '../constants/events';
 import { LcuWatcher } from './lcu';
-import { IChampionSelectRespData } from '@interfaces/commonTypes';
 
 interface WsData {
   eventType: string;

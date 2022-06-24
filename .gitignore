@@ -18,3 +18,4 @@ lib/
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+yarn.lock

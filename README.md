@@ -70,25 +70,25 @@ https://github.com/GeorgeV220/champ-r/releases
 
 ### Prerequisite
 
-- [Node.js](https://nodejs.org/en/) >= 10 or <= 15 (fibers are not working anymore on node 16+) More info [here](https://github.com/laverdet/node-fibers)
+- [Node.js](https://nodejs.org/en/) >= 14
 - [yarn](https://classic.yarnpkg.com/lang/en/)
 
 ### Install dependencies
 
 ```console
-pnpm install
+yarn
 ```
 
 ### Start
 
 ```console
-pnpm run start
+yarn start
 ```
 
 ### Build
 
 ```console
-pnpm run build:local
+yarn build:local
 ```
 
 

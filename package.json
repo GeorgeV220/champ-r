@@ -24,7 +24,7 @@
   "main": "build/main.js",
   "scripts": {
     "prepare": "husky install",
-    "postinstall": "npx cross-env electron-builder install-app-deps && patch-package",
+    "postinstall": "cross-env electron-builder install-app-deps && patch-package",
     "clean:main": "npx rimraf build/",
     "compile:main": "tsc -p app/",
     "start:electron": "nodemon --exec \"yarn clean:main && yarn compile:main && run-electron build/main.js --inspect=5858\"",
@@ -34,14 +34,14 @@
     "dist:local-dir": "cross-env yarn compile:main && electron-builder ---win --linux deb tar.gz pacman rpm AppImage --x64 -p never --dir",
     "dist": "cross-env yarn compile:main && electron-builder --win --linux deb tar.gz pacman rpm AppImage --x64 -p always",
     "build:react": "node scripts/build.js",
-    "build:local": "npx cross-env pnpm run build:react && pnpm run dist:local",
-    "build:local-dir": "npx cross-env pnpm run build:react && pnpm run dist:local-dir",
-    "build:ci": "pnpm run modify:version && npx cross-env BUILD_IN_CI=true pnpm run build:react && pnpm run dist:local",
-    "build": "npx cross-env pnpm run build:react && pnpm run dist",
-    "b": "npx cross-env TEST_CHANNEL=true pnpm run build:local",
-    "bl": "npx cross-env SHOW_POPUP_TRIGGER=true TEST_CHANNEL=true pnpm run build:local",
-    "bld": "npx cross-env SHOW_POPUP_TRIGGER=true TEST_CHANNEL=true pnpm run build:local-dir",
-    "release": "pnpm run build",
+    "build:local": "cross-env yarn build:react && yarn dist:local",
+    "build:local-dir": "cross-env yarn build:react && yarn dist:local-dir",
+    "build:ci": "yarn modify:version && cross-env BUILD_IN_CI=true yarn build:react && yarn dist:local",
+    "build": "cross-env yarn build:react && yarn dist",
+    "b": "cross-env TEST_CHANNEL=true yarn build:local",
+    "bl": "cross-env SHOW_POPUP_TRIGGER=true TEST_CHANNEL=true yarn build:local",
+    "bld": "cross-env SHOW_POPUP_TRIGGER=true TEST_CHANNEL=true yarn build:local-dir",
+    "release": "yarn build",
     "pack": "electron-builder --dir",
     "lint": "eslint --fix",
     "modify:version": "node scripts/modify-build-version.js",
@@ -167,6 +167,10 @@
     "webpack": "4.44.2",
     "webpack-dev-server": "3.11.2",
     "webpack-sources": "^1.4.3"
+  },
+  "resolutions": {
+    "@types/react": "17.0.2",
+    "@types/react-dom": "17.0.2"
   },
   "babel": {
     "presets": [
