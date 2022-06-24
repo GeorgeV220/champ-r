@@ -31,6 +31,7 @@ export default {
     'please specify lol dir': `Please specify lol directory first.`,
     'ignore system scale': `Ignore system scale (restart required)`,
     'dark theme': `Enable dark theme (restart required)`,
+    'start minimized': `Start minimized`,
     'restart app': `Restart ChampR`,
     aram: `ARAM`,
     urf: `URF`,
@@ -51,5 +52,8 @@ export default {
     'pin/unpin': `Pin/Unpin`,
     'reset popup position': `Reset popup window position`,
     done: `Done`,
+    'mirror server': `Fetch resources with CN mirror server`,
+    'no data': `No Data.`,
+    hide: `Hide`,
   },
 };

@@ -1,83 +1,50 @@
-name: Test Build
+name: 😼 Test Build
 
 on:
   push:
     branches:
-      - master
+      - main
       - build
   pull_request:
     branches:
-      - master
+      - main
 
 jobs:
   # This workflow contains a single job called "build"
   build:
     # The type of runner that the job will run on
-    runs-on: ubuntu-20.04
+    runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
-        with:
-          node-version: '14'
-          cache: 'yarn'
+    - uses: actions/checkout@v2
+    - uses: actions/setup-node@v2
+      with:
+        node-version: '16'
+    - uses: pnpm/action-setup@v2.2.2
+      with:
+        version: 'latest'
 
-      - name: Get yarn cache directory path
-        id: yarn-cache-dir-path
-        run: echo "::set-output name=dir::$(yarn cache dir)"
-      - uses: actions/cache@v2
-        id: yarn-cache # use this to check for `cache-hit` (`steps.yarn-cache.outputs.cache-hit != 'true'`)
-        with:
-          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
-          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-yarn-
+    - name: Build
+      run: |
+        $sha = (git rev-parse --short HEAD)
+        echo 'node-linker=hoisted' > .npmrc # make it work with electron
+        pnpm i --frozen-lockfile
+        $env:SHORT_SHA=$sha; pnpm run build:ci
 
-      - name: Install build dependencies
-        run: |
-          sudo dpkg --add-architecture i386
-          sudo apt update
-          wget -qO- https://dl.winehq.org/wine-builds/winehq.key | sudo apt-key add -
-          sudo apt install software-properties-common
-          sudo apt-add-repository "deb http://dl.winehq.org/wine-builds/ubuntu/ focal main"
-          sudo apt install --install-recommends winehq-stable
-          sudo apt install gnupg ca-certificates
-          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
-          echo "deb https://download.mono-project.com/repo/ubuntu stable-focal main" | sudo tee /etc/apt/sources.list.d/mono-official-stable.list
-          sudo apt update
-          sudo apt install mono-devel
-          sudo apt-get install --no-install-recommends -y libopenjp2-tools
-          sudo apt-get install --no-install-recommends -y rpm
-          sudo apt-get install --no-install-recommends -y libarchive-tools
+    - name: Move artifacts
+      id: vars
+      shell: pwsh
+      run: |
+        $sha = (git rev-parse --short HEAD)
+        md -Name ./dist/artifacts -Force
+        Copy-Item ./dist/*.exe -Destination ./dist/artifacts/
+        $file = Get-ChildItem -Path ./dist/artifacts/ -Filter "*.exe" | select-object -first 1
+        $newName = "$($file.BaseName).$($sha)$($file.Extension)"
+        Rename-Item -Path $file.FullName -NewName $newName
+        echo "::set-output name=fileName::$($newName)"
 
-      - name: Build
-        shell: pwsh
-        run: |
-          yarn install --silent
-          yarn build:ci
-          $sha = (git rev-parse --short HEAD)
-
-      - name: Move artifacts
-        id: vars
-        shell: pwsh
-        run: |
-          $sha = (git rev-parse --short HEAD)
-          md -p ./dist/artifacts
-          Copy-Item ./dist/*.exe -Destination ./dist/artifacts/
-          Copy-Item ./dist/*.deb -Destination ./dist/artifacts/
-          Copy-Item ./dist/*.tar.gz -Destination ./dist/artifacts/
-          $file = Get-ChildItem -Path ./dist/artifacts/ -Filter "*.tar.gz" | select-object -first 1
-          $newName = "$($file.BaseName).$($sha)$($file.Extension)"
-          Rename-Item -Path $file.FullName -NewName $newName
-          $file = Get-ChildItem -Path ./dist/artifacts/ -Filter "*.exe" | select-object -first 1
-          $newName = "$($file.BaseName).$($sha)$($file.Extension)"
-          Rename-Item -Path $file.FullName -NewName $newName
-          $file = Get-ChildItem -Path ./dist/artifacts/ -Filter "*.deb" | select-object -first 1
-          $newName = "$($file.BaseName).$($sha)$($file.Extension)"
-          Rename-Item -Path $file.FullName -NewName $newName
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: Artifacts
-          path: "./dist/artifacts"
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: ${{ steps.vars.outputs.fileName }}
+        path: "./dist/artifacts"

@@ -4,8 +4,9 @@ import React, { useCallback, useContext, useEffect, useRef, useState } from 'rea
 import { useHistory } from 'react-router-dom';
 import cn from 'classnames';
 import { useTranslation } from 'react-i18next';
+import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 
-import { CornerDownRight } from 'react-feather';
+import { CornerDownRight, Move } from 'react-feather';
 import { useStyletron } from 'baseui';
 import { Button, KIND as BtnKind, SIZE as BtnSize } from 'baseui/button';
 import { Checkbox, STYLE_TYPE, LABEL_PLACEMENT } from 'baseui/checkbox';
@@ -21,8 +22,9 @@ import { ChampionKeys } from 'src/share/constants/champions';
 import AppContext from 'src/share/context';
 import LolQQ from 'src/service/data-source/lol-qq';
 import CdnService from 'src/service/data-source/cdn-service';
+import { SourceQQ } from 'src/share/constants/sources';
 
-import useSourceList from './useSourceList';
+import { useSourceList } from './useSourceList';
 
 import s from 'src/app.module.scss';
 import logo from 'src/assets/app-icon.webp';
@@ -42,7 +44,7 @@ export default function Home({ onDirChange = _noop }: IProps) {
   const versionTasker = useRef<number>();
   const instances = useRef<CdnService[]>([]);
 
-  const { loading: fetchingSources, sourceList } = useSourceList();
+  const { loading: fetchingSources, sourceList, setSourceList } = useSourceList();
   const [selectedSources, toggleSource] = useState<string[]>(
     window.bridge.appConfig.get(`selectedSources`) ?? [],
   );
@@ -57,7 +59,7 @@ export default function Home({ onDirChange = _noop }: IProps) {
     try {
       const { canceled, filePaths = [] }: any = await createIpcPromise(`openSelectFolderDialog`);
       if (canceled) {
-        return Promise.reject({ canceled });
+        return;
       }
 
       if (!filePaths) {
@@ -67,7 +69,6 @@ export default function Home({ onDirChange = _noop }: IProps) {
       setLolDir(dir);
     } catch (err) {
       console.error(err.message);
-      return Promise.reject(null);
     }
   };
 
@@ -102,20 +103,59 @@ export default function Home({ onDirChange = _noop }: IProps) {
     () =>
       Promise.allSettled([
         LolQQ.getLolVersion().then((v) => {
-          dispatch(updateDataSourceVersion(sourceList[0].label, v));
+          dispatch(updateDataSourceVersion(SourceQQ.label, v));
         }),
-        ...instances.current.map((i) =>
-          i.getPkgInfo().then(({ sourceVersion }) => {
-            dispatch(updateDataSourceVersion(i.pkgName, sourceVersion));
-          }),
-        ),
+        ...instances.current.map((i) => {
+          if (window.bridge.appConfig.get(`alwaysRequestLatestVersion`)) {
+            return i.getPkgInfo().then(({ sourceVersion }) => {
+              dispatch(updateDataSourceVersion(i.pkgName, sourceVersion));
+            });
+          }
+
+          return i.getSourceVersion().then((ver) => {
+            dispatch(updateDataSourceVersion(i.pkgName, ver));
+          });
+        }),
       ]),
-    [dispatch, sourceList],
+    [dispatch],
   );
+
+  const onReorderSources = (result: DropResult) => {
+    const { source, destination } = result;
+    if (!destination) {
+      return;
+    }
+    if (destination.index === source.index) {
+      return;
+    }
+
+    let newList;
+    if (destination.index > source.index) {
+      newList = [
+        ...sourceList
+          .slice(0, destination.index + 1)
+          .filter((i) => i.value !== sourceList[source.index].value),
+        sourceList[source.index],
+        ...sourceList.slice(destination.index + 1),
+      ];
+    } else {
+      newList = [
+        ...sourceList.slice(0, destination.index),
+        sourceList[source.index],
+        ...sourceList
+          .slice(destination.index)
+          .filter((i) => i.value !== sourceList[source.index].value),
+      ];
+    }
+
+    setSourceList(newList);
+  };
 
   useEffect(() => {
     // exclude the `qq` source
-    instances.current = sourceList.slice(1).map((s) => new CdnService(s.value, dispatch));
+    instances.current = sourceList
+      .filter((i) => i.value !== SourceQQ.value)
+      .map((s) => new CdnService(s.value, dispatch));
   }, [sourceList, dispatch]);
 
   useEffect(() => {
@@ -128,7 +168,7 @@ export default function Home({ onDirChange = _noop }: IProps) {
     return () => {
       clearInterval(versionTasker.current);
     };
-  }, [fetchVersion]);
+  }, [sourceList]); // eslint-disable-line
 
   useEffect(() => {
     // persist user preference
@@ -205,74 +245,91 @@ export default function Home({ onDirChange = _noop }: IProps) {
         <div dangerouslySetInnerHTML={{ __html: t('installation path of League of Legends') }} />
       </code>
 
-      <div className={s.sources}>
-        <H6 margin={`0 0 1ex 0`} color={theme.colors.borderInverseOpaque}>
-          <div
-            className={s.sourceTitle}
-            dangerouslySetInnerHTML={{
-              __html: t(`data sources`),
-            }}
-          />
-        </H6>
+      <H6 margin={`0 0 1ex 0`} color={theme.colors.borderInverseOpaque}>
+        <div
+          className={s.sourceTitle}
+          dangerouslySetInnerHTML={{
+            __html: t(`data sources`),
+          }}
+        />
+      </H6>
+      <DragDropContext onDragEnd={onReorderSources}>
+        <Droppable droppableId={`droppable`}>
+          {(provided, snapshot) => (
+            <div {...provided.droppableProps} ref={provided.innerRef} className={s.sources}>
+              {sourceList.map((v, idx) => {
+                const { isAram, isURF } = v;
+                const sourceVer = store.dataSourceVersions[v.value];
 
-        {sourceList.map((v) => {
-          const { isAram, isURF } = v;
-          const sourceVer = store.dataSourceVersions[v.value];
-
-          return (
-            <Checkbox
-              key={v.value}
-              checked={selectedSources.includes(v.label)}
-              onChange={onCheck(v.label)}
-              overrides={{
-                Root: {
-                  style: ({ $theme }) => ({
-                    display: 'flex',
-                    alignItems: 'center',
-                    height: '3em',
-                    boxShadow: `0px 1px 0 ${$theme.colors.borderTransparent}`,
-                    minHeight: `48px`,
-                  }),
-                },
-                Checkmark: {
-                  style: ({ $checked, $theme }) => ({
-                    // borderColor: $checked
-                    //   ? $theme.colors.positive
-                    //   : $theme.colors.backgroundNegative,
-                    backgroundColor: $checked
-                      ? $theme.colors.positive
-                      : $theme.colors.backgroundAlwaysLight,
-                  }),
-                },
-                Label: {
-                  style: ({ $theme }) => ({
-                    fontSize: $theme.sizing.scale600,
-                    textTransform: `uppercase`,
-                    display: `flex`,
-                    alignItems: `center`,
-                  }),
-                },
-              }}>
-              {v.label}
-              {sourceVer && (
-                <Tag closeable={false} variant={VARIANT.outlined} kind='warning'>
-                  {sourceVer}
-                </Tag>
-              )}
-              {isAram && (
-                <Tag closeable={false} variant={VARIANT.light} kind='positive'>
-                  {t(`aram`)}
-                </Tag>
-              )}
-              {isURF && (
-                <Tag closeable={false} variant={VARIANT.light} kind='positive'>
-                  {t(`urf`)}
-                </Tag>
-              )}
-            </Checkbox>
-          );
-        })}
-      </div>
+                return (
+                  <Draggable key={v.value} draggableId={v.value} index={idx}>
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        {...provided.dragHandleProps}>
+                        <Checkbox
+                          key={v.value}
+                          checked={selectedSources.includes(v.label)}
+                          onChange={onCheck(v.label)}
+                          overrides={{
+                            Root: {
+                              style: ({ $theme }) => ({
+                                display: 'flex',
+                                alignItems: 'center',
+                                height: '3em',
+                                boxShadow: `0px 1px 0 ${$theme.colors.borderTransparent}`,
+                                minHeight: `48px`,
+                              }),
+                            },
+                            Checkmark: {
+                              style: ({ $checked, $theme }) => ({
+                                // borderColor: $checked
+                                //   ? $theme.colors.positive
+                                //   : $theme.colors.backgroundNegative,
+                                backgroundColor: $checked
+                                  ? $theme.colors.positive
+                                  : $theme.colors.backgroundAlwaysLight,
+                              }),
+                            },
+                            Label: {
+                              style: ({ $theme }) => ({
+                                fontSize: $theme.sizing.scale550,
+                                textTransform: `uppercase`,
+                                display: `flex`,
+                                flex: 1,
+                                alignItems: `center`,
+                              }),
+                            },
+                          }}>
+                          {v.label}
+                          {sourceVer && (
+                            <Tag closeable={false} variant={VARIANT.outlined} kind='warning'>
+                              {sourceVer}
+                            </Tag>
+                          )}
+                          {isAram && (
+                            <Tag closeable={false} variant={VARIANT.light} kind='positive'>
+                              {t(`aram`)}
+                            </Tag>
+                          )}
+                          {isURF && (
+                            <Tag closeable={false} variant={VARIANT.light} kind='positive'>
+                              {t(`urf`)}
+                            </Tag>
+                          )}
+                          <Move className={s.move} size={18} />
+                        </Checkbox>
+                      </div>
+                    )}
+                  </Draggable>
+                );
+              })}
+              {provided.placeholder}
+            </div>
+          )}
+        </Droppable>
+      </DragDropContext>
 
       <div className={s.control}>
         <Button
@@ -364,7 +421,15 @@ export default function Home({ onDirChange = _noop }: IProps) {
               const championId = ChampionKeys[Math.floor(Math.random() * ChampionKeys.length)];
               window.bridge.sendMessage(`showPopup`, {
                 championId,
+                noCache: true,
               });
+
+              // setTimeout(() => {
+              //   window.bridge.sendMessage(`showPopup`, {
+              //     championId: 72,
+              //     noCache: true,
+              //   });
+              // }, 1500);
             }}>
             show popup
           </button>

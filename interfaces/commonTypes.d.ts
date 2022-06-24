@@ -59,6 +59,7 @@ export interface IChampionBuild {
   champion: string;
   position: string;
   blocks: IBuildBlock[];
+  sortrank?: number;
 }
 
 export interface IChampionCdnDataItem {
@@ -150,6 +151,7 @@ export interface IChampionSelectRespData {
 
 export interface IPopupEventData {
   championId: number;
+  noCache?: boolean;
 }
 
 export interface IPerkPage {

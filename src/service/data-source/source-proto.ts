@@ -12,7 +12,7 @@ interface ICachedReq<T> {
   subscribers: { resolve: (r: T) => void; reject: (reason?: any) => void }[];
 }
 
-const fetchLatestVersionFromCdn_ = () => {
+const fetchLatestVersionFromMirror = () => {
   let requestIdx = 0;
   const versionReq: { [key: string]: ICachedReq<string> } = {};
 
@@ -32,7 +32,7 @@ const fetchLatestVersionFromCdn_ = () => {
         index: requestIdx,
         subscribers: [],
       };
-      const data: any = await http.get(`${url}?t=${Date.now()}`);
+      const data: any = await http.get(url);
       req.done = true;
       req.lastTime = Date.now();
       req.result = data[`dist-tags`].latest;
@@ -50,7 +50,7 @@ const fetchLatestVersionFromCdn_ = () => {
   };
 };
 
-export const fetchLatestVersionFromCdn = fetchLatestVersionFromCdn_();
+export const fetchLatestVersionFromCdn = fetchLatestVersionFromMirror();
 
 export default class SourceProto {
   public cancelHandlers: { [key: string]: IVoidFunc } = {};
@@ -69,7 +69,7 @@ export default class SourceProto {
   static getPkgInfo = async (npmUrl: string, cdnUrl: string) => {
     try {
       const version = await fetchLatestVersionFromCdn(npmUrl);
-      const data: IPkgInfo = await http.get(`${cdnUrl}@${version}/package.json?${Date.now()}`);
+      const data: IPkgInfo = await http.get(`${cdnUrl}@${version}/package.json`);
       return data;
     } catch (err) {
       console.error(err);
