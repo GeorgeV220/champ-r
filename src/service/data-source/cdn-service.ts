@@ -1,9 +1,10 @@
 import { nanoid as uuid } from 'nanoid';
 import _noop from 'lodash/noop';
+import axiosRetry from 'axios-retry';
 
 import http, { CancelToken } from 'src/service/http';
 import { addFetched, addFetching } from 'src/share/actions';
-import SourceProto, { fetchLatestVersionFromCdn } from './source-proto';
+import SourceProto from './source-proto';
 import {
   IChampionCdnDataItem,
   IRuneItem,
@@ -11,14 +12,29 @@ import {
   IChampionInfo,
 } from '@interfaces/commonTypes';
 
-const CDN_PREFIX = `https://cdn.jsdelivr.net/npm/@champ-r`;
-const T_NPM_PREFIX = `https://registry.npm.taobao.org/@champ-r`;
+export const CDN_PREFIX = `https://unpkg.com/@champ-r`;
+export const CHINA_CDN_PREFIX = `https://npm.elemecdn.com/@champ-r`;
+
+export const T_NPM_PREFIX = `https://mirrors.cloud.tencent.com/npm/@champ-r`;
+export const NPM_MIRROR = `https://mirrors.cloud.tencent.com/npm`;
+
+export const getCDNPrefix = (enableChinaCDN = false) =>
+  enableChinaCDN ? CHINA_CDN_PREFIX : CDN_PREFIX;
 
 const Stages = {
   FETCH_CHAMPION_LIST: `FETCH_CHAMPION_LIST`,
   FETCH_CHAMPION_DATA: `FETCH_CHAMPION_DATA`,
   GEN_DATA_FILE: `GEN_DATA_FILE`,
 };
+
+axiosRetry(http, {
+  retries: 3,
+  retryCondition: (err) => {
+    console.log(err.response?.status);
+    return (err.response?.status ?? 200) >= 400;
+  },
+  retryDelay: () => 200,
+});
 
 interface IFetchFailedData {
   champion: string;
@@ -39,22 +55,59 @@ type IFetchResult =
     };
 
 export default class CdnService extends SourceProto {
-  public cdnUrl = ``;
   public tNpmUrl = ``;
+  public version = ``;
+  public sourceVersion = ``;
+  // public webUrl = ``;
 
   constructor(public pkgName = ``, public dispatch = _noop) {
     super();
-    this.cdnUrl = `${CDN_PREFIX}/${pkgName}`;
-    this.tNpmUrl = `${T_NPM_PREFIX}/${pkgName}`;
+    this.tNpmUrl = `${T_NPM_PREFIX}/${pkgName}/latest`;
+  }
+
+  get cdnPrefix() {
+    const enable = window.bridge.appConfig.get(`enableChinaCDN`, false);
+    const urlPrefix = getCDNPrefix(enable);
+    return `${urlPrefix}/${this.pkgName}`;
+  }
+
+  get cdnUrl() {
+    const enable = window.bridge.appConfig.get(`enableChinaCDN`, false);
+    const urlPrefix = getCDNPrefix(enable);
+    return `${urlPrefix}/${this.pkgName}/latest`;
   }
 
   public getPkgInfo = () => SourceProto.getPkgInfo(this.tNpmUrl, this.cdnUrl);
 
+  public getSourceVersion = async () => {
+    if (!this.sourceVersion) {
+      await this.getLatestPkgVer();
+    }
+
+    return this.sourceVersion;
+  };
+
+  public getLatestPkgVer = async () => {
+    try {
+      const data: { version: string; sourceVersion: string } = await http.get(
+        `${this.tNpmUrl}?_=${Date.now()}`,
+      );
+      this.sourceVersion = data.sourceVersion;
+      return data.version;
+    } catch (err) {
+      console.error(err);
+      return Promise.resolve(`latest`);
+    }
+  };
+
   public getChampionList = async () => {
     try {
-      const version = await fetchLatestVersionFromCdn(this.tNpmUrl);
+      if (!this.version) {
+        this.version = await this.getLatestPkgVer();
+      }
+
       const data: { [key: string]: IChampionInfo } = await http.get(
-        `${this.cdnUrl}@${version}/index.json?${Date.now()}`,
+        `${this.cdnPrefix}@${this.version}/index.json`,
         {
           cancelToken: new CancelToken(this.setCancelHook(`fetch-champion-list`)),
         },
@@ -70,21 +123,29 @@ export default class CdnService extends SourceProto {
 
   public getChampionDataFromCdn = async (champion: string, $identity: string = ``) => {
     try {
-      const version = await fetchLatestVersionFromCdn(this.tNpmUrl);
+      if (!this.version) {
+        this.version = await this.getLatestPkgVer();
+      }
+
       const data: IChampionCdnDataItem[] = await http.get(
-        `${this.cdnUrl}@${version}/${champion}.json?${Date.now()}`,
+        `${this.cdnPrefix}@${this.version}/${champion}.json`,
         {
           cancelToken: new CancelToken(this.setCancelHook($identity)),
         },
       );
       return data;
     } catch (err) {
-      console.error(err.stack);
+      const { response } = err;
+      if (response.status === 404) {
+        return response;
+      }
+
+      console.log(err.response.status, err.response.headers);
       throw new Error(err);
     }
   };
 
-  public genItemBuilds = async (champion: string, lolDir: string) => {
+  public genItemBuilds = async (champion: string, lolDir: string, sortrank: number) => {
     try {
       const $identity = uuid();
       this.dispatch(
@@ -96,7 +157,11 @@ export default class CdnService extends SourceProto {
       );
 
       const data = await this.getChampionDataFromCdn(champion);
-      const tasks = data.reduce((t, i) => {
+
+      if (!data || data.status >= 400) {
+        return Promise.resolve(null);
+      }
+      const tasks = (data as IChampionCdnDataItem[]).reduce((t, i) => {
         const { position, itemBuilds } = i;
         const pStr = position ? `${position} - ` : ``;
         itemBuilds.forEach((k, idx) => {
@@ -106,7 +171,7 @@ export default class CdnService extends SourceProto {
             position,
             fileName: `[${this.pkgName.toUpperCase()}] ${pStr}${champion}-${idx + 1}`,
           };
-          t = t.concat(window.bridge.file.saveToFile(lolDir, file));
+          t = t.concat(window.bridge.file.saveToFile(lolDir, file, true, sortrank));
         });
 
         return t;
@@ -136,18 +201,25 @@ export default class CdnService extends SourceProto {
     try {
       const $id = uuid();
       const data = await this.getChampionDataFromCdn(alias, $id);
-      return data.reduce((arr, i) => arr.concat(i.runes), [] as IRuneItem[]);
+      if (!data || data.status >= 400) {
+        return Promise.reject(data);
+      }
+
+      return (data as IChampionCdnDataItem[]).reduce(
+        (arr, i) => arr.concat(i.runes),
+        [] as IRuneItem[],
+      );
     } catch (err) {
       console.error(err.message, err.stack);
       return Promise.reject(err);
     }
   };
 
-  public importFromCdn = async (lolDir: string) => {
+  public importFromCdn = async (lolDir: string, index = 0) => {
     try {
       const championMap = await this.getChampionList();
       const tasks = Object.keys(championMap).map((champion) =>
-        this.genItemBuilds(champion, lolDir),
+        this.genItemBuilds(champion, lolDir, index + 1),
       );
       const r = await Promise.allSettled(tasks);
       const result = r.reduce(
@@ -179,7 +251,7 @@ export default class CdnService extends SourceProto {
     const fulfilled = [];
     const rejected = [];
     for (const v of result) {
-      const { status, value, reason } = v;
+      const { status, value, reason } = v ?? {};
       switch (status) {
         case 'fulfilled':
           fulfilled.push([value.champion, value.position]);

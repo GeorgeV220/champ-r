@@ -26,6 +26,8 @@ import { appConfig } from './utils/config';
 import { ifIsCNServer, LcuWatcher } from './utils/lcu';
 import { LanguageList, LanguageSet } from './constants/langs';
 import { LcuEvent } from './constants/events';
+import { LcuWsClient } from './utils/ws';
+import { hasPwsh } from './utils/cmd';
 
 const isMac = process.platform === 'darwin';
 const isDev = process.env.IS_DEV_MODE === `true`;
@@ -188,6 +190,8 @@ function persistPopUpBounds(w: BrowserWindow) {
 let lastChampion = 0;
 
 async function onShowPopup(data: IPopupEventData) {
+  if (data.noCache) lastChampion = 0;
+
   if (!data.championId || lastChampion === data.championId) {
     return;
   }
@@ -252,10 +256,6 @@ function registerMainListeners() {
     popupWindow.setPosition(x, y);
   });
 
-  ipcMain.on(`app-sha`, (_ev, data) => {
-    console.info(`app sha is ${data.sha}`);
-  });
-
   ipcMain.on(`updateLolDir`, async (_ev, { lolDir }) => {
     console.info(`lolDir is ${lolDir}`);
     appConfig.set(`lolDir`, lolDir);
@@ -270,14 +270,14 @@ function registerMainListeners() {
   });
 
   ipcMain.on(`openSelectFolderDialog`, async (_, { jobId }: any) => {
-    const data = await dialog.showOpenDialog({ properties: ['openDirectory'] });
-    mainWindow?.webContents.send(`openSelectFolderDialog:done:${jobId}`, {
-      ...data,
-      jobId,
-    });
-
-    if (!data.canceled) {
-      lcuWatcher?.changeDir(data.filePaths[0]);
+    try {
+      const data = await dialog.showOpenDialog({ properties: ['openDirectory'] });
+      mainWindow?.webContents.send(`openSelectFolderDialog:done:${jobId}`, {
+        ...data,
+        jobId,
+      });
+    } catch (e) {
+      mainWindow?.webContents.send(`openSelectFolderDialog:reject:${jobId}`, e);
     }
   });
 
@@ -300,6 +300,10 @@ function registerMainListeners() {
 
   ipcMain.on(`showPopup`, (_ev, data: IPopupEventData) => {
     onShowPopup(data);
+  });
+
+  ipcMain.on(`hidePopup`, () => {
+    popupWindow?.hide();
   });
 }
 
@@ -388,7 +392,9 @@ async function checkUpdates() {
     }
   }
 
-  lcuWatcher = new LcuWatcher(appConfig.get(`lolDir`));
+  const pwsh = await hasPwsh();
+  lcuWatcher = new LcuWatcher(pwsh);
+  const lcuWs = new LcuWsClient(lcuWatcher);
 
   mainWindow = await createMainWindow();
   popupWindow = await createPopupWindow();
@@ -409,6 +415,12 @@ async function checkUpdates() {
   registerMainListeners();
 
   await makeTray();
+
+  if (appConfig.get(`startMinimized`)) {
+    mainWindow.hide();
+    mainWindow.setSkipTaskbar(true);
+  }
+
   const userId = await getMachineId();
 
   console.log(`userId: ${userId}`);

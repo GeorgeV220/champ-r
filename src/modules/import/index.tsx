@@ -42,7 +42,7 @@ export default function Import() {
     [key: string]: SourceProto;
   }>({});
 
-  const importFromSources = useCallback(async () => {
+  const importFromSources = async () => {
     const { selectedSources, keepOld, fetched } = store;
 
     setLoading(true);
@@ -52,21 +52,24 @@ export default function Import() {
     dispatch(updateFetchingSource(selectedSources));
 
     if (!keepOld) {
-      await window.bridge.file.removeFolderContent(`${lolDir}/Game/Config/Champions`).then(() => {
-        toaster.positive(t(`removed outdated items`), {});
-      });
+      await Promise.all([
+        window.bridge.file.removeFolderContent(`${lolDir}/Game/Config/Champions`),
+        window.bridge.file.removeFolderContent(`${lolDir}/Config/Champions`),
+      ]);
+      toaster.positive(t(`removed outdated items`), {});
     }
 
     const { itemMap } = store;
     let lolqqTask = _noop;
 
     if (selectedSources.includes(SourceQQ.label)) {
+      const idx = sourceList.findIndex((i) => i.label === SourceQQ.label);
       const instance = new LolQQImporter(lolDir, itemMap, dispatch);
       workers.current[SourceQQ.label] = instance;
 
       lolqqTask = () =>
         instance
-          .import()
+          .import(idx + 1)
           .then(() => {
             toaster.positive(`[${SourceQQ.label.toUpperCase()}] ${t(`completed`)}`, {});
             dispatch(importBuildSucceed(SourceQQ.label));
@@ -83,7 +86,10 @@ export default function Import() {
           });
     }
 
-    const tasks = sourceList.slice(1).map((p) => {
+    const tasks = sourceList.map((p, index) => {
+      if (p.value === SourceQQ.value) {
+        return Promise.resolve();
+      }
       // exclude the `qq` source
       if (!selectedSources.includes(p.label)) {
         return Promise.resolve();
@@ -92,7 +98,7 @@ export default function Import() {
       const instance = new CdnService(p.value, dispatch);
       workers.current[p.label] = instance;
       return instance
-        .importFromCdn(lolDir)
+        .importFromCdn(lolDir, index)
         .then((result) => {
           const { rejected } = result;
           if (!rejected.length) {
@@ -117,7 +123,7 @@ export default function Import() {
     } finally {
       setLoading(false);
     }
-  }, [store]);
+  };
 
   const stop = () => {
     setLoading(false);

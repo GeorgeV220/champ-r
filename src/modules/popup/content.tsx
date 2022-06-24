@@ -6,13 +6,13 @@ import { useTranslation } from 'react-i18next';
 import { useImmer } from 'use-immer';
 
 import toast, { Toaster } from 'react-hot-toast';
-import { Check, Smile } from 'react-feather';
+import { Check, Smile, X } from 'react-feather';
 import { styled } from 'styletron-react';
 import { StatefulPopover, TRIGGER_TYPE } from 'baseui/popover';
 import { Select } from 'baseui/select';
 import { useStyletron } from 'baseui';
 
-import { ISourceItem, QQChampionAvatarPrefix } from 'src/share/constants/sources';
+import { ISourceItem, QQChampionAvatarPrefix, SourceQQ } from 'src/share/constants/sources';
 
 import LolQQ from 'src/service/data-source/lol-qq';
 import CdnService from 'src/service/data-source/cdn-service';
@@ -74,20 +74,22 @@ export function Content() {
   );
   const instances = useRef([
     new LolQQ(),
-    ...sourceList.slice(1).map((p) => new CdnService(p.value)),
+    ...sourceList.filter((i) => i.value !== SourceQQ.value).map((p) => new CdnService(p.value)),
   ]); // exclude the `qq` source
 
   useEffect(() => {
-    (instances.current[1] as CdnService).getChampionList().then((data) => {
-      const champMap = makeChampMap(data);
-      setChampionMap(champMap);
+    (instances.current.filter((i) => i.pkgName !== SourceQQ.value)[0] as CdnService)
+      .getChampionList()
+      .then((data) => {
+        const champMap = makeChampMap(data);
+        setChampionMap(champMap);
 
-      window.bridge.on('for-popup', ({ championId: id }: { championId: number }) => {
-        if (id) {
-          setChampionId(id);
-        }
+        window.bridge.on('for-popup', ({ championId: id }: { championId: number }) => {
+          if (id) {
+            setChampionId(id);
+          }
+        });
       });
-    });
   }, []);
 
   useEffect(() => {
@@ -101,26 +103,36 @@ export function Content() {
     }
     setChampionDetail(champ);
 
-    (instances.current[0] as LolQQ).getChampionPerks(champ.key, champ.id).then((result) => {
+    let qq = instances.current.find((i) => i.pkgName === SourceQQ.value);
+    (qq as LolQQ).getChampionPerks(champ.key, champ.id).then((result) => {
       setPerkList((draft) => {
-        draft[0] = result;
+        const index = instances.current.findIndex((i) => i.pkgName === SourceQQ.value);
+        if (index >= 0) {
+          draft[index] = result;
+        }
       });
     });
 
     instances.current.forEach((i, idx) => {
-      if (idx === 0) {
+      if (i.pkgName === SourceQQ.value) {
         return;
       }
 
       (i as CdnService)
         .getRunesFromCDN(champ.id)
         .then((result) => {
+          if (!result) {
+            return;
+          }
           setPerkList((draft) => {
             draft[idx] = result;
           });
         })
         .catch((err) => {
           console.error(err);
+          setPerkList((draft) => {
+            draft[idx] = err.status;
+          });
         });
     });
   }, [championId, championMap, setPerkList]);
@@ -139,6 +151,7 @@ export function Content() {
 
   const apply = async (perk: IRuneItem) => {
     try {
+      console.log(`apply perk:`, perk.name);
       await createIpcPromise(`applyRunePage`, perk);
       console.info(`[popup] applied selected perk`);
       toast.dismiss();
@@ -169,10 +182,16 @@ export function Content() {
     togglePinned((p) => !p);
   };
 
-  const renderList = (list: IRuneItem[] = [], isAramMode = false) => {
-    const shouldShowList = list.length && championDetail && list[0].alias === championDetail.id;
+  const onClose = () => {
+    window.bridge.sendMessage(`hidePopup`);
+  };
 
-    if (!shouldShowList) {
+  const renderList = (list: IRuneItem[] | number, isAramMode = false, isUrf = false) => {
+    if (list === 404) {
+      return <div className={s.noData}>{t(`no data`)}</div>;
+    }
+
+    if (!championDetail || !(list as IRuneItem[]).length) {
       return <Loading className={s.listLoading} />;
     }
 
@@ -181,11 +200,12 @@ export function Content() {
         style={{
           height: `calc(100vh - 5em)`,
         }}>
-        {list.map((p, idx) => (
+        {(list as IRuneItem[]).map((p, idx) => (
           <PerkShowcase
             key={`${championId}-${idx}`}
             idx={idx}
             isAramMode={isAramMode}
+            isUrfMode={isUrf}
             perk={p}
             onApply={() => apply(p)}
             onMouseEnter={showPreview}
@@ -200,10 +220,20 @@ export function Content() {
 
   const renderContent = () => {
     if (!championMap || !perkList[0].length) {
-      return <Loading className={s.loading} />;
+      return (
+        <div className={s.waiting}>
+          <Loading className={s.loading} />
+          <button className={s.close} onClick={onClose}>
+            <X size={26} color={`#EA4C89`} />
+          </button>
+        </div>
+      );
     }
 
-    const tabIdx = sourceList.findIndex((i) => i.value === activeTab[0].value);
+    const pkgName = activeTab[0].value;
+    const tabIdx = instances.current.findIndex((i) => i.pkgName === pkgName);
+    const source = sourceList.find((i) => i.value === pkgName);
+
     return (
       <div className={s.main}>
         {championDetail && (
@@ -212,6 +242,12 @@ export function Content() {
               <Pin onClick={toggleAlwaysOnTop}>
                 <PinBtn $pinned={pinned} />
               </Pin>
+            </StatefulPopover>
+
+            <StatefulPopover content={t(`hide`)} triggerType={TRIGGER_TYPE.hover}>
+              <button className={s.close} onClick={onClose}>
+                <X size={26} color={`#EA4C89`} />
+              </button>
             </StatefulPopover>
 
             <img
@@ -258,7 +294,9 @@ export function Content() {
         )}
 
         {perkList[tabIdx] && (
-          <div className={s.list}>{renderList(perkList[tabIdx], sourceList[tabIdx].isAram)}</div>
+          <div className={s.list}>
+            {renderList(perkList[tabIdx], source?.isAram, source?.isURF)}
+          </div>
         )}
       </div>
     );
@@ -276,7 +314,7 @@ export function Content() {
           },
           blank: {
             icon: <Smile size={16} />,
-            duration: 100 * 1000,
+            duration: 5 * 1000,
             style: {
               backgroundColor: theme.colors.backgroundInverseSecondary,
               color: theme.colors.contentInversePrimary,

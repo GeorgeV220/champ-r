@@ -25,6 +25,8 @@ Yet another League of Legends helper.
 - 😎 Multiple data sources for **Summoner's Rift** & **ARAM**
   - `op.gg`
   - `lolalytics.com`
+  - `u.gg`
+  - `champion.gg`
   - `murderbridge.com`
   - `101.qq.com`
   - ...
@@ -65,17 +67,22 @@ https://github.com/GeorgeV220/champ-r/releases
 ### Install dependencies
 
 ```console
-yarn
+pnpm install
 ```
 
 ### Start
 
 ```console
-yarn start
+pnpm run start
 ```
 
 ### Build
 
 ```console
-yarn build:local
+pnpm run build:local
 ```
+
+
+## Stargazers over time
+
+[![Stargazers over time](https://starchart.cc/cangzhang/champ-r.svg)](https://starchart.cc/cangzhang/champ-r)
