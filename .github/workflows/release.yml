@@ -33,19 +33,7 @@ jobs:
         run: |
           sudo dpkg --add-architecture i386
           sudo apt update
-          sudo apt install software-properties-common apt-transport-https wget -y
-          wget -nc https://dl.winehq.org/wine-builds/ubuntu/dists/jammy/winehq-jammy.sources
-          sudo mv winehq-jammy.sources /etc/apt/sources.list.d/
-          wget -nc https://dl.winehq.org/wine-builds/winehq.key
-          sudo mv winehq.key /usr/share/keyrings/winehq-archive.key
-          echo "APT::Get::Always-Include-Phased-Updates \"1\";" > sudo tee /etc/apt/apt.conf.d/99phased-updates
-          sudo apt update
-          sudo apt install --install-recommends wine-stable wine32
           sudo apt install gnupg ca-certificates
-          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
-          echo "deb https://download.mono-project.com/repo/ubuntu stable-focal main" | sudo tee /etc/apt/sources.list.d/mono-official-stable.list
-          sudo apt update
-          sudo apt install mono-devel
           sudo apt install --no-install-recommends -y libopenjp2-tools
           sudo apt install --no-install-recommends -y rpm
           sudo apt install --no-install-recommends -y libarchive-tools
@@ -69,9 +57,6 @@ jobs:
           Copy-Item ./dist/*.deb -Destination ./dist/artifacts/
           Copy-Item ./dist/*.tar.gz -Destination ./dist/artifacts/
           $file = Get-ChildItem -Path ./dist/artifacts/ -Filter "*.tar.gz" | select-object -first 1
-          $newName = "$($file.BaseName).$($sha)$($file.Extension)"
-          Rename-Item -Path $file.FullName -NewName $newName
-          $file = Get-ChildItem -Path ./dist/artifacts/ -Filter "*.exe" | select-object -first 1
           $newName = "$($file.BaseName).$($sha)$($file.Extension)"
           Rename-Item -Path $file.FullName -NewName $newName
           $file = Get-ChildItem -Path ./dist/artifacts/ -Filter "*.deb" | select-object -first 1
