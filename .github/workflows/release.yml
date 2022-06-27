@@ -53,7 +53,6 @@ jobs:
         run: |
           $sha = (git rev-parse --short HEAD)
           md -p ./dist/artifacts
-          Copy-Item ./dist/*.exe -Destination ./dist/artifacts/
           Copy-Item ./dist/*.deb -Destination ./dist/artifacts/
           Copy-Item ./dist/*.tar.gz -Destination ./dist/artifacts/
           $file = Get-ChildItem -Path ./dist/artifacts/ -Filter "*.tar.gz" | select-object -first 1
