@@ -6,6 +6,7 @@ import cn from 'classnames';
 
 import { MainRuneMap, SubRuneMap, FragmentMap } from 'src/share/constants/runes';
 import { IRuneItem, ICSSProperties, ICoordinate } from '@interfaces/commonTypes';
+import { useStyletron } from 'baseui';
 
 interface IProps {
   perk: IRuneItem | null;
@@ -13,6 +14,7 @@ interface IProps {
 }
 
 export default function RunePreview({ perk, coordinate }: IProps) {
+  const [css, theme] = useStyletron();
   const { primaryStyleId = 0, subStyleId = 0, selectedPerkIds } = perk ?? {
     primaryStyleId: 0,
     subStyleId: 0,
@@ -40,7 +42,11 @@ export default function RunePreview({ perk, coordinate }: IProps) {
             }
 
             return (
-              <div key={id} className={cn(s.runeImg, s[`rune-${id}`], selected && s.selected)} />
+              <div key={id} className={cn(s.runeImg, s[`rune-${id}`], selected && s.selected, 
+              css ({
+                backgroundColor: theme.colors.background,
+              }),
+              )} />
             );
           })}
         </div>
@@ -63,9 +69,16 @@ export default function RunePreview({ perk, coordinate }: IProps) {
   };
 
   return ReactDOM.createPortal(
-    <div style={style} className={cn(s.main, up && s.up)}>
+    <div style={style} className={cn(s.main, up && s.up, 
+      css ({
+        backgroundColor: theme.colors.background,
+      }),
+    )}>
       <span className={cn(s.bot, s.triangle)} />
-      <span className={cn(s.top, s.triangle)} />
+      <span className={cn(s.top, s.triangle, css ({
+        borderColor: ( theme.colors.background ),
+      }),
+      )} />
       <div className={s.col}>{mainIds.map(renderRow())}</div>
       <div className={s.col}>{subIds.map(renderRow())}</div>
       <div className={cn(s.col, s.fragment)}>{FragmentMap.map(renderRow(true))}</div>

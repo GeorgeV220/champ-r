@@ -19,6 +19,14 @@ export default function Footer() {
   };
 
   return (
+     // <div className={
+     // cn(s.footer,
+     //   css({
+     //     backgroundColor: theme.colors.background,
+     //     color: theme.colors.primary,
+     //   }),
+     //   )}
+     //>
     <div className={s.footer}>
       {process.env.IS_DEV
         ? `dev`

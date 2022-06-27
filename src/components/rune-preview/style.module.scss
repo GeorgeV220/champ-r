@@ -11,7 +11,6 @@ $imgGap: 0.4ex;
   border-radius: 4px;
   transition: top 0.1s linear;
   box-shadow: 0 2px 16px rgba(0, 0, 0, 0.28);
-  background-color: #ffffff;
   display: flex;
 
   .col {
@@ -95,7 +94,7 @@ $imgGap: 0.4ex;
     }
 
     &.top {
-      border-color: #f6f6f6 transparent transparent;
+      border-color: transparent transparent;
       top: $topOffset;
     }
   }

@@ -25,6 +25,7 @@ import { ReactComponent as PinIcon } from 'src/assets/icons/push-pin.svg';
 import { IChampionInfo, IRuneItem, ICoordinate } from '@interfaces/commonTypes';
 import { makeChampMap } from './utils';
 import { createIpcPromise } from 'src/service/ipc';
+import cn from 'classnames';
 
 const Pin = styled(`button`, () => ({
   margin: `0 2ex 0 0`,
@@ -54,7 +55,7 @@ const getInitTab = () => {
 
 export function Content() {
   const [t] = useTranslation();
-  const [, theme] = useStyletron();
+  const [css, theme] = useStyletron();
   const sourceList: ISourceItem[] = window.bridge.appConfig.get(`sourceList`);
 
   const [activeTab, setActiveTab] = useState<ISourceItem[]>(getInitTab());
@@ -235,7 +236,15 @@ export function Content() {
     const source = sourceList.find((i) => i.value === pkgName);
 
     return (
-      <div className={s.main}>
+      <div className={
+            cn(
+              s.main,
+              css ({
+                backgroundColor: theme.colors.background,
+              }),
+            )
+          }
+        >
         {championDetail && (
           <div className={s.drag}>
             <StatefulPopover content={t(`pin/unpin`)} triggerType={TRIGGER_TYPE.hover}>
@@ -245,7 +254,12 @@ export function Content() {
             </StatefulPopover>
 
             <StatefulPopover content={t(`hide`)} triggerType={TRIGGER_TYPE.hover}>
-              <button className={s.close} onClick={onClose}>
+              <button className={cn(s.close, css(
+                  {  
+                    backgroundColor: theme.colors.background, 
+                  },
+                  ))
+                  } onClick={onClose}>
                 <X size={26} color={`#EA4C89`} />
               </button>
             </StatefulPopover>
@@ -294,7 +308,16 @@ export function Content() {
         )}
 
         {perkList[tabIdx] && (
-          <div className={s.list}>
+          <div className={
+            cn(
+              s.list,
+              css ({
+                color: theme.colors.primary,
+                backgroundColor: theme.colors.background,
+              }),
+            )
+          }
+        >
             {renderList(perkList[tabIdx], source?.isAram, source?.isURF)}
           </div>
         )}

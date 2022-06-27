@@ -21,7 +21,7 @@ export const appConfig = new Store({
     },
     sourceList: DefaultSourceList,
     lolDirHasCJKChar: false,
-    darkTheme: false,
+    darkTheme: true,
     alwaysRequestLatestVersion: false,
     enableChinaCDN: false,
     startMinimized: false,

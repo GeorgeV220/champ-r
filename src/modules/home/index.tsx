@@ -198,7 +198,20 @@ export default function Home({ onDirChange = _noop }: IProps) {
     !store.version || !lolDir || !selectedSources.length || fetchingSources;
 
   return (
-    <div className={s.container}>
+    //className={cn(
+    //  s.folderTip,
+    //  css({
+    //    backgroundColor: theme.colors.backgroundLightWarning,
+    //    borderRadius: theme.borders.radius300,
+    //  }),
+    //)}
+    <div className={cn(
+                    s.container,
+                    css({
+                      backgroundColor: theme.colors.background,
+                      color: theme.colors.primary,
+                    }),
+      )}>
       <h1 className={s.title}>
         <img src={logo} alt='' />
         <span>ChampR</span>

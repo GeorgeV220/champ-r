@@ -9,6 +9,8 @@ import { useTranslation } from 'react-i18next';
 import { Select } from 'baseui/select';
 import { Button } from 'baseui/button';
 import { Checkbox, STYLE_TYPE } from 'baseui/checkbox';
+import { useStyletron } from 'baseui';
+import cn from 'classnames';
 
 interface ILangItem {
   label: string;
@@ -43,10 +45,10 @@ export default function Settings() {
   const [ignoreSystemScale, setIgnoreSystemScale] = useState(
     window.bridge.appConfig.get(`ignoreSystemScale`),
   );
-  const [theme, setTheme] = useState(window.bridge.appConfig.get(`darkTheme`));
+  const [themeConf, setTheme] = useState(window.bridge.appConfig.get(`darkTheme`));
   const [enableChinaCDN, toggleCNServer] = useState(window.bridge.appConfig.get(`enableChinaCDN`));
   const [startMinimized, setStartMinimized] = useState(window.bridge.appConfig.get(`startMinimized`));
-
+  const [css, theme] = useStyletron();
   const recorder = useRef(false);
 
   const onSelectLang = (param: any) => {
@@ -64,7 +66,7 @@ export default function Settings() {
     recorder.current = true;
   };
 
-  const onTheme = (e: FormEvent<HTMLInputElement>) => {
+  const onTheme = (e: FormEvent<HTMLInputElement>) => { 
     setTheme(e.currentTarget.checked);
     window.bridge.appConfig.set(`darkTheme`, e.currentTarget.checked);
     recorder.current = true;
@@ -91,7 +93,15 @@ export default function Settings() {
   }, [values]);
 
   return (
-    <div className={s.settings}>
+    <div className={
+        cn(
+          s.settings,
+          css({
+            backgroundColor: theme.colors.background,
+            color: theme.colors.primary,
+          }),
+        )
+      }>
       <div className={s.lang}>
         <label>{t(`display language`)}</label>
         <Select
@@ -145,7 +155,7 @@ export default function Settings() {
       </Checkbox>
 
       <Checkbox
-        checked={theme}
+        checked={themeConf}
         checkmarkType={STYLE_TYPE.toggle_round}
         onChange={onTheme}
         overrides={{

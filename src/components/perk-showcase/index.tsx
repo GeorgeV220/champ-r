@@ -9,6 +9,7 @@ import { Zap } from 'react-feather';
 
 import { IRuneItem } from '@interfaces/commonTypes';
 import { MainStyleIds } from 'src/share/constants/runes';
+import { useStyletron } from 'baseui';
 
 interface IProps {
   isAramMode?: boolean;
@@ -32,7 +33,7 @@ export default function PerkShowcase({
   const { primaryStyleId, subStyleId, selectedPerkIds } = perk;
   const pId = selectedPerkIds.find((i) => MainStyleIds[primaryStyleId].includes(+i));
   const el = useRef(null);
-
+  const [css, theme] = useStyletron();
   const shouldShowStatistics = perk.winRate?.length > 0 && perk.pickCount > 0;
 
   const displayPosition = (position = ``) => {
@@ -47,7 +48,13 @@ export default function PerkShowcase({
 
   return (
     <div
-      className={s.item}
+      className={
+        cn(
+          s.item,
+          css ({
+            backgroundColor: theme.colors.background,
+          }),
+        )}
       ref={el}
       onMouseEnter={() => onMouseEnter(perk, el.current)}
       onMouseLeave={onMouseLeave}>
@@ -71,7 +78,13 @@ export default function PerkShowcase({
         )}
       </div>
 
-      <div className={s.apply} title={t(`apply perk`)} onClick={onApply}>
+      <div className={
+        cn(
+          s.apply,
+          css ({
+            backgroundColor: theme.colors.background,
+          }),
+        )} title={t(`apply perk`)} onClick={onApply}>
         <Zap color={`#21A453`} size={36} />
       </div>
     </div>
