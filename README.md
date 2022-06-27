@@ -34,13 +34,13 @@ Yet another League of Legends helper.
 ## Install
 
 ### Windows
-1. Download the latest exe release from [here](https://github.com/GeorgeV220/champ-r/releases).
+1. Download the latest exe release from [here](https://github.com/cangzhang/champ-r/releases).
 ### Ubuntu/Debian
 1. Download the latest deb release from [here](https://github.com/GeorgeV220/champ-r/releases).
 ### Arch
 1. Download the latest pacman release from [here](https://github.com/GeorgeV220/champ-r/releases).
 2. Open the download location in your terminal e.g. cd /home/USER/Downloads.
-3. Then run pacman -U champ-r-1.1.14.pacman as root.
+3. Then run pacman -U champ-r-<vesrsion>.pacman as root.
 
 https://github.com/GeorgeV220/champ-r/releases
 
@@ -48,7 +48,7 @@ https://github.com/GeorgeV220/champ-r/releases
 
 ### Import builds
 
-1. Run ChampR as **administrator** if you are on windows
+1. Run ChampR
 2. Choose the installation folder of League of Lengends
 3. Select data sources
 4. Hit `Import` button
@@ -56,7 +56,7 @@ https://github.com/GeorgeV220/champ-r/releases
 
 ### Apply Runes
 
-1. Run ChampR as **administrator** if you are on windows
+1. Run ChampR
 2. Choose the installation folder of League of Lengends
 3. Start pvp game, the rune popup would show in the screen
 4. Press `Apply` icon
@@ -94,4 +94,4 @@ yarn build:local
 
 ## Stargazers over time
 
-[![Stargazers over time](https://starchart.cc/cangzhang/champ-r.svg)](https://starchart.cc/cangzhang/champ-r)
+[![Stargazers over time](https://starchart.cc/GeorgeV220/champ-r.svg)](https://starchart.cc/GeorgeV220/champ-r)
