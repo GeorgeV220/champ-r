@@ -16,7 +16,7 @@ import Toolbar from 'src/components/toolbar';
 import Home from 'src/modules/home';
 import Import from 'src/modules/import';
 import Settings from 'src/modules/settings';
-import { darkTheme } from './DarkTheme';
+import { darkTheme } from 'src/modules/theme/DarkTheme'; 
 
 const engine = new Styletron();
 

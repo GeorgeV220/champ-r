@@ -5,7 +5,7 @@ import { Provider as StyletronProvider } from 'styletron-react';
 import { LightTheme, BaseProvider } from 'baseui';
 import initI18n from 'src/modules/i18n';
 import { Content } from './content';
-import { darkTheme } from 'src/DarkTheme';
+import { darkTheme } from 'src/modules/theme/DarkTheme';
 
 initI18n();
 const engine = new Styletron();
