@@ -41,6 +41,10 @@ Yet another League of Legends helper.
 1. Download the latest pacman release from [here](https://github.com/GeorgeV220/champ-r/releases).
 2. Open the download location in your terminal e.g. cd /home/USER/Downloads.
 3. Then run pacman -U champ-r-<vesrsion>.pacman as root.
+### RHEL/Fedora/CentOS and other RHEL based systems
+1. Download the latest rpm release from [here](https://github.com/GeorgeV220/champ-r/releases).
+2. Open the download location in your terminal e.g. cd /home/USER/Downloads.
+3. For `Fefora` run `sudo dnf localinstall champ-r-<version>.rpm`. For other `RHEL Based` systems `sudo yum localinstall champ-r-<version>.rpm`
 
 https://github.com/GeorgeV220/champ-r/releases
 
